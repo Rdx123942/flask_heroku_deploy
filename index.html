@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Get all infrormation </title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Additional custom styles can be added here */
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center">URL INFO</h1>
+        <form id="domainForm" action="{{ url_for('lookup') }}" method="POST">
+            <div class="form-group">
+                <label for="domainName" class="form-label">Enter a Domain name:</label>
+                <input type="text" class="form-control" id="domainName" name="domain" required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">Lookup</button>
+        </form>
+        <div id="resultBox" class="mt-3"></div>
+
+        <!-- New form for getting the IP address of a domain -->
+        <div class="text-center mt-3">
+            <form id="getIpForm" action="{{ url_for('get_ip') }}" method="POST">
+                <div class="form-group">
+                    <label for="ipDomain" class="form-label">Get IP Address for a Domain:</label>
+                    <input type="text" class="form-control" id="ipDomain" name="domain" required>
+                </div>
+                <button type="submit" class="btn btn-success">Get IP Address</button>
+            </form>
+            <div id="ipResult" class="mt-2"></div>
+        </div>
+
+        <div class="text-center mt-3">
+            <form id="downloadForm" action="{{ url_for('download_excel') }}" method="POST">
+                <input type="hidden" id="downloadDomain" name="domain" value="">
+                <button type="submit" class="btn btn-success">Download WHOIS Data as Excel</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.1.3/socket.io.js"></script>
+    <script>
+        $(document).ready(function() {
+            var socket = io.connect('http://' + document.domain + ':' + location.port);
+
+            $("#domainForm").submit(function(event) {
+                event.preventDefault();
+                var domain = $("#domainName").val();
+                $.ajax({
+                    url: "/lookup",
+                    method: "POST",
+                    data: { domain: domain },
+                    success: function(response) {
+                        // Split the response by newlines and join with <br> tags
+                        var formattedResponse = response.split("\n").join("<br>");
+                        // Display the formatted result in the result box
+                        $("#resultBox").html('<div class="alert alert-info">' + formattedResponse + '</div>');
+                    }
+                });
+            });
+
+            // Handle the Get IP Address form submission
+            $("#getIpForm").submit(function(event) {
+                event.preventDefault();
+                var domain = $("#ipDomain").val();
+                $.ajax({
+                    url: "/get_ip",
+                    method: "POST",
+                    data: { domain: domain },
+                    success: function(response) {
+                        // Split the response by newlines and join with <br> tags
+                        var formattedResponse = response.split("\n").join("<br>");
+                        // Display the formatted IP address result
+                        $("#ipResult").html('<div class="alert alert-info">' + formattedResponse + '</div>');
+                    }
+                });
+            });
+
+            $("#downloadForm").submit(function(event) {
+                event.preventDefault();
+                var domain = $("#domainName").val();
+                $("#downloadDomain").val(domain);
+                $("#downloadForm").submit();
+            });
+
+            // Handle real-time update from the server
+            socket.on('lookup_update', function(data) {
+                // Split the response by newlines and join with <br> tags
+                var formattedResponse = data.result.split("\n").join("<br>");
+                // Display the formatted result in the result box
+                $("#resultBox").html('<div class="alert alert-info">' + formattedResponse + '</div>');
+            });
+        });
+    </script>
+</body>
+</html>
